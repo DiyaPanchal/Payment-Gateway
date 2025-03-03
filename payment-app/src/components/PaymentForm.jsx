@@ -1,120 +1,85 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
-const PaymentForm = () => {
-  const [userId, setUserId] = useState("");
-  const [amount, setAmount] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [transactionId, setTransactionId] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
+const AuthForm = ({ type }) => {
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    name: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const fetchUserDetails = async () => {
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) navigate("/profile");
+  }, [navigate]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
     try {
-      const { data } = await axios.get(
-        `http://localhost:3000/get-user/${userId}`
+      const endpoint = type === "signup" ? "/signup" : "/login";
+      const { data } = await axios.post(
+        `http://localhost:3000${endpoint}`,
+        formData
       );
-      setMobile(data.phone);
+      localStorage.setItem("token", data.token);
+      navigate("/profile");
     } catch (error) {
-      alert("Error fetching user details");
-    }
-  };
-
-  const sendOtp = async () => {
-    try {
-      await axios.post("http://localhost:3000/sendotp", { mobile });
-      setOtpSent(true);
-      alert(`OTP sent to ${mobile}`);
-    } catch (error) {
-      alert("Error sending OTP");
-    }
-  };
-
-  const verifyOtpAndInitiatePayment = async () => {
-    try {
-      await axios.post("http://localhost:3000/verifyotp", { mobile, otp });
-
-      const { data } = await axios.post("http://localhost:3000/initiate", {
-        userId,
-        amount,
-      });
-      setTransactionId(data.transaction.id);
-
-      alert("OTP verified! Initiating payment...");
-
-      const options = {
-        key: "YOUR_RAZORPAY_KEY_ID",
-        amount: data.order.amount,
-        currency: "INR",
-        name: "Test Payment",
-        order_id: data.order.id,
-        handler: function (response) {
-          verifyPayment(
-            response.razorpay_payment_id,
-            response.razorpay_signature
-          );
-        },
-      };
-
-      const rzp = new window.Razorpay(options);
-      rzp.open();
-    } catch (error) {
-      alert("OTP verification failed");
-    }
-  };
-
-  const verifyPayment = async (paymentId, signature) => {
-    try {
-      await axios.post("http://localhost:3000/verify-payment", {
-        transactionId,
-        paymentId,
-        signature,
-      });
-      alert("Payment successful!");
-    } catch (error) {
-      alert("Payment verification failed");
+      alert("Authentication failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Payment Form</h2>
-      <input
-        type="text"
-        placeholder="User ID"
-        value={userId}
-        onChange={(e) => setUserId(e.target.value)}
-      />
-      <button onClick={fetchUserDetails}>Fetch User</button>
-
-      {mobile && (
-        <>
-          <h3>User Mobile: {mobile}</h3>
-          <button onClick={sendOtp}>Send OTP</button>
-        </>
-      )}
-
-      {otpSent && (
-        <>
+    <div className="flex flex-col items-center mt-10">
+      <h2 className="text-xl font-bold mb-4">
+        {type === "signup" ? "Signup" : "Login"}
+      </h2>
+      <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-80">
+        {type === "signup" && (
           <input
             type="text"
-            placeholder="Enter OTP"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
+            name="name"
+            placeholder="Name"
+            className="p-2 border rounded"
+            onChange={handleChange}
+            required
           />
-          <input
-            type="number"
-            placeholder="Amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          <button onClick={verifyOtpAndInitiatePayment}>
-            Verify OTP & Pay
-          </button>
-        </>
-      )}
+        )}
+        <input
+          type="email"
+          name="email"
+          placeholder="Email"
+          className="p-2 border rounded"
+          onChange={handleChange}
+          required
+        />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          className="p-2 border rounded"
+          onChange={handleChange}
+          required
+        />
+        <button
+          type="submit"
+          className="bg-blue-500 text-white p-2 rounded"
+          disabled={loading}
+        >
+          {loading ? "Processing..." : type === "signup" ? "Sign Up" : "Login"}
+        </button>
+      </form>
     </div>
   );
 };
 
-export default PaymentForm;
+export default AuthForm;

@@ -1,11 +1,18 @@
-import PaymentForm from "./components/PaymentForm"
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import PaymentForm from "./components/PaymentForm";
+import LoginForm from "./components/LoginForm";
+import SignupForm from "./components/SignupForm";
 
 function App() {
   return (
-    <div>
-      <h1>Payment Gateway</h1>
-      <PaymentForm />
-    </div>
+    <Router>
+     
+        <Routes>
+          <Route path="/signup" element={<SignupForm />} />
+          <Route path="/" element={<LoginForm />} />
+          <Route path="/payment" element={<PaymentForm />} />
+        </Routes>
+    </Router>
   );
 }
 

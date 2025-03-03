@@ -46,7 +46,7 @@ export const login = async (req: Request, res: Response): Promise<any> => {
 
 export const getProfile = async (req: Request, res: Response): Promise<any> => {
   try {
-    const token = req.header("Authorization");
+    const token = req.header("Authorization")?.split(" ")[1]; 
     if (!token)
       return res.status(401).json({ msg: "No token, authorization denied" });
 

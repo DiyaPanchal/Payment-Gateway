@@ -7,16 +7,13 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
 const client = twilio(accountSid, authToken);
 
-
 export const sendOTP = async (req: Request, res: Response) => {
   try {
     const { phone } = req.body;
 
- 
     const user = await User.findOne({ phone });
     if (!user) return res.status(404).json({ message: "User not found" });
 
- 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
     user.otp = otp;
@@ -27,13 +24,18 @@ export const sendOTP = async (req: Request, res: Response) => {
       from: twilioPhone,
       to: phone,
     });
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + 5);
+
+    user.otp = otp;
+    user.otpExpiresAt = otpExpiry;
+    await user.save();
 
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error sending OTP", error });
   }
 };
-
 
 export const verifyOTP = async (req: Request, res: Response) => {
   try {
@@ -44,6 +46,11 @@ export const verifyOTP = async (req: Request, res: Response) => {
 
     if (user.otp !== otp)
       return res.status(400).json({ message: "Invalid OTP" });
+    // if (!user.otp || user.otpExpiresAt < new Date()) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "OTP expired, request a new one" });
+    // }
 
     user.otp = undefined;
     await user.save();

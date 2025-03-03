@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import Razorpay from "razorpay";
-import Transaction, { ITransaction } from "../models/Transaction";
+import Transaction from "../models/Transaction";
 import User from "../models/User";
 import crypto from "crypto";
 
@@ -9,12 +9,18 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_KEY_SECRET as string,
 });
 
+async function isOTPVerified(userId: string) {
+  const user = await User.findById(userId);
+  return user && !user.otp; 
+}
+
 export const initiatePayment = async (req: Request, res: Response):Promise<any> => {
   try {
     const { userId, amount } = req.body;
-
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+    if (!(await isOTPVerified(userId)))
+      return res.status(403).json({ message: "OTP verification required" });
 
     const transaction = await Transaction.create({
       userId,
@@ -30,8 +36,8 @@ export const initiatePayment = async (req: Request, res: Response):Promise<any> 
     };
 
     const order = await razorpay.orders.create(options);
-
     transaction.status = "Initiated";
+    transaction.orderId = order.id;
     await transaction.save();
 
     res.status(201).json({
@@ -45,64 +51,69 @@ export const initiatePayment = async (req: Request, res: Response):Promise<any> 
   }
 };
 
-export const verifyPayment = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+export const confirmPayment = async (req: Request, res: Response): Promise<any> => {
   try {
-    const { transactionId, paymentId, signature, orderId } = req.body;
-
+    const { transactionId, paymentId } = req.body;
     const transaction = await Transaction.findById(transactionId);
     if (!transaction)
       return res.status(404).json({ message: "Transaction not found" });
+    if (transaction.status !== "Initiated")
+      return res.status(400).json({ message: "Invalid transaction state" });
 
-    const expectedSignature = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET as string)
-      .update(orderId + "|" + paymentId)
-      .digest("hex");
-
-    if (expectedSignature !== signature) {
+    const user = await User.findById(transaction.userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.balance < transaction.amount) {
       transaction.status = "Failed";
-      transaction.reason = "Signature mismatch or tampered response";
+      transaction.reason = "Insufficient balance";
       await transaction.save();
-      return res
-        .status(400)
-        .json({
-          message: "Payment verification failed",
-          reason: transaction.reason,
-        });
+      return res.status(400).json({ message: "Insufficient balance" });
     }
 
-    transaction.status = "Credited";
-    transaction.paymentId = paymentId;
-    await transaction.save();
+    const session = await Transaction.startSession();
+    session.startTransaction();
+    try {
+      user.balance -= transaction.amount;
+      await user.save({ session });
+      transaction.status = "Deducted";
+      transaction.paymentId = paymentId;
+      await transaction.save({ session });
+      await session.commitTransaction();
+      session.endSession();
 
-    res.json({ message: "Payment successful", transaction });
+      res.json({ message: "Payment deducted from user", transaction });
+    } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
+      transaction.status = "Failed";
+      transaction.reason = "Transaction error";
+      await transaction.save();
+      res.status(500).json({ message: "Transaction failed", error: err });
+    }
   } catch (error) {
-    res.status(500).json({ message: "Payment verification failed", error });
+    res.status(500).json({ message: "Error confirming payment", error });
   }
 };
 
-export const confirmPayment = async (req: Request, res: Response):Promise<any> => {
+export const processPayment = async (req: Request, res: Response):Promise<any> => {
   try {
     const { transactionId } = req.body;
-    const transaction = (await Transaction.findById(
-      transactionId
-    ).lean()) as ITransaction | null;
+    const transaction = await Transaction.findById(transactionId);
 
     if (!transaction)
       return res.status(404).json({ message: "Transaction not found" });
 
-    if (transaction.status !== "Initiated")
-      return res
-        .status(400)
-        .json({ message: "Payment is not in an initiated state" });
+    if (
+      transaction.status !== "Confirmed" &&
+      transaction.status !== "Deducted"
+    ) {
+      return res.status(400).json({ message: "Invalid transaction state" });
+    }
 
-    transaction.status = "Confirmed";
-    await Transaction.findByIdAndUpdate(transactionId, { status: "Confirmed" });
+    transaction.status = "Credited";
+    await transaction.save();
 
-    res.json({ message: "Payment confirmed", transaction });
+    res.json({ message: "Payment processed successfully", transaction });
   } catch (error) {
-    res.status(500).json({ message: "Error confirming payment", error });
+    res.status(500).json({ message: "Error processing payment", error });
   }
 };
