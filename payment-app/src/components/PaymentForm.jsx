@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import "./paymentForm.css"; // Import styles
 
 const PaymentForm = () => {
   const [userId, setUserId] = useState("");
@@ -46,7 +47,7 @@ const PaymentForm = () => {
         key: "YOUR_RAZORPAY_KEY_ID",
         amount: data.order.amount,
         currency: "INR",
-        name: "Test Payment",
+        name: "Secure Payment",
         order_id: data.order.id,
         handler: function (response) {
           verifyPayment(
@@ -77,20 +78,30 @@ const PaymentForm = () => {
   };
 
   return (
-    <div>
-      <h2>Payment Form</h2>
+    <div className="payment-container">
+      <h2>Secure Online Payment</h2>
+      <p className="description">
+        Make payments securely with our simple and fast payment gateway. Enter
+        your user details, verify via OTP, and proceed with the transaction.
+      </p>
+
       <input
         type="text"
-        placeholder="User ID"
+        placeholder="Enter User ID"
         value={userId}
         onChange={(e) => setUserId(e.target.value)}
+        className="input-field"
       />
-      <button onClick={fetchUserDetails}>Fetch User</button>
+      <button onClick={fetchUserDetails} className="primary-button">
+        Fetch User Details
+      </button>
 
       {mobile && (
         <>
-          <h3>User Mobile: {mobile}</h3>
-          <button onClick={sendOtp}>Send OTP</button>
+          <h3 className="user-info">User Mobile: {mobile}</h3>
+          <button onClick={sendOtp} className="primary-button">
+            Send OTP
+          </button>
         </>
       )}
 
@@ -101,14 +112,19 @@ const PaymentForm = () => {
             placeholder="Enter OTP"
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
+            className="input-field"
           />
           <input
             type="number"
-            placeholder="Amount"
+            placeholder="Enter Amount (INR)"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            className="input-field"
           />
-          <button onClick={verifyOtpAndInitiatePayment}>
+          <button
+            onClick={verifyOtpAndInitiatePayment}
+            className="primary-button"
+          >
             Verify OTP & Pay
           </button>
         </>
