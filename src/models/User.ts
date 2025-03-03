@@ -5,7 +5,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   phone: string;
-  otp?: string;
+  otp?: string | null;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -14,7 +14,7 @@ const UserSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     password: {type:String, required:true},
     phone: { type: String, required: true, unique: true },
-    otp: { type: String },
+    otp: { type: String, default: null },
   },
   { timestamps: true }
 );
