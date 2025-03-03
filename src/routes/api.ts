@@ -10,6 +10,7 @@ apiRouter.use(bodyParser.json());
 
 
 apiRouter.post("/initiate", PaymentController.initiatePayment);
-apiRouter.post("/process/:transactionId", PaymentController.processPayment);
+apiRouter.post("/verify", PaymentController.verifyPayment);
+apiRouter.post("/confirm", PaymentController.confirmPayment);
 
 export default apiRouter;

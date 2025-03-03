@@ -1,11 +1,12 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface ITransaction extends Document {
   userId: string;
   amount: number;
-  status: "Pending" | "Initiated" | "Deducted" | "Credited" | "Failed";
+  status: "Pending" | "Initiated" |"Confirmed"| "Deducted" | "Credited" | "Failed";
+  orderId?: string;
+  paymentId?: string;
   reason?: string;
-  createdAt: Date;
 }
 
 const TransactionSchema = new Schema<ITransaction>(
@@ -14,13 +15,18 @@ const TransactionSchema = new Schema<ITransaction>(
     amount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["Pending", "Initiated", "Deducted", "Credited", "Failed"],
+      enum: ["Pending", "Confirmed", "Initiated", "Deducted", "Credited", "Failed"],
       default: "Pending",
     },
+    orderId: { type: String }, 
+    paymentId: { type: String }, 
     reason: { type: String },
-    createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
-export default mongoose.model<ITransaction>("Transaction", TransactionSchema);
+const Transaction: Model<ITransaction> = mongoose.model<ITransaction>(
+  "Transaction",
+  TransactionSchema
+);
+export default Transaction;
