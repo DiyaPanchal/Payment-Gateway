@@ -11,7 +11,7 @@ export const sendOTP = async (req: Request, res: Response): Promise<any> => {
   try {
     const { phone } = req.body;
     const verification = await client.verify.v2
-      .services("VAf3a15dacd72eefeba3751442287569dc")
+      .services("VAeff4cbc3054f578dbcfaa074800ca805")
       .verifications.create({ to: phone, channel: "sms" });
 
     res.json({ message: "OTP sent successfully", sid: verification.sid });
@@ -31,7 +31,7 @@ export const verifyOTP = async (req: Request, res: Response): Promise<any> => {
     }
 
     const verificationCheck = await client.verify.v2
-      .services("VAf3a15dacd72eefeba3751442287569dc")
+      .services("VAeff4cbc3054f578dbcfaa074800ca805")
       .verificationChecks.create({ to: phone, code: otp });
 
     if (verificationCheck.status !== "approved") {
