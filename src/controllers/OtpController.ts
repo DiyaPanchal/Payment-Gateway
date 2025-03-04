@@ -7,56 +7,55 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
 const client = twilio(accountSid, authToken);
 
-export const sendOTP = async (req: Request, res: Response) => {
+export const sendOTP = async (req: Request, res: Response): Promise<any> => {
   try {
     const { phone } = req.body;
 
-    const user = await User.findOne({ phone });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    // Request Twilio to send an OTP
+    const verification = await client.verify.v2
+      .services("VAf3a15dacd72eefeba3751442287569dc")
+      .verifications.create({ to: phone, channel: "sms" });
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-    user.otp = otp;
-    await user.save();
-
-    await client.messages.create({
-      body: `Your OTP code is ${otp}`,
-      from: twilioPhone,
-      to: phone,
-    });
-    const otpExpiry = new Date();
-    otpExpiry.setMinutes(otpExpiry.getMinutes() + 5);
-
-    user.otp = otp;
-    user.otpExpiresAt = otpExpiry;
-    await user.save();
-
-    res.json({ message: "OTP sent successfully" });
+    res.json({ message: "OTP sent successfully", sid: verification.sid });
   } catch (error) {
+    console.error("Error sending OTP:", error);
     res.status(500).json({ message: "Error sending OTP", error });
   }
 };
 
-export const verifyOTP = async (req: Request, res: Response) => {
+export const verifyOTP = async (req: Request, res: Response): Promise<any> => {
   try {
+    console.log("Received OTP verification request:", req.body);
+
     const { phone, otp } = req.body;
+    if (!phone || !otp) {
+      return res.status(400).json({ message: "Phone and OTP are required" });
+    }
+
+    const verificationCheck = await client.verify.v2
+      .services("VAf3a15dacd72eefeba3751442287569dc")
+      .verificationChecks.create({ to: phone, code: otp });
+
+    if (verificationCheck.status !== "approved") {
+      console.error("Invalid OTP for phone:", phone);
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
 
     const user = await User.findOne({ phone });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    if (user.otp !== otp)
-      return res.status(400).json({ message: "Invalid OTP" });
-    // if (!user.otp || user.otpExpiresAt < new Date()) {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "OTP expired, request a new one" });
-    // }
-
-    user.otp = undefined;
+    // ✅ Mark OTP as verified in the database
+    user.isOtpVerified = true;
     await user.save();
 
+    console.log("OTP verified successfully for user:", phone);
     res.json({ message: "OTP verified successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Error verifying OTP", error });
+    console.error("Error verifying OTP:", error);
+    res
+      .status(500)
+      .json({ message: "Error verifying OTP", error: error});
   }
 };

@@ -16,7 +16,7 @@ const LoginForm = () => {
       });
       localStorage.setItem("token", data.token);
       alert("Login Successful!");
-      navigate("/payment"); 
+      navigate("/payment");
     } catch (error) {
       alert("Invalid Credentials");
     }
@@ -42,6 +42,15 @@ const LoginForm = () => {
         />
         <button type="submit">Login</button>
       </form>
+      <p>
+        Don't have an account?{" "}
+        <span
+          style={{ color: "blue", cursor: "pointer" }}
+          onClick={() => navigate("/signup")}
+        >
+          Signup here
+        </span>
+      </p>
     </div>
   );
 };

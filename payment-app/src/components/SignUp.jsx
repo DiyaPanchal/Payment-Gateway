@@ -2,33 +2,40 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
-const SignupForm = () => {
+const SignUp = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const handleSignup = async (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
+
+    if (!name || !email || !phone || !password) {
+      alert("All fields are required!");
+      return;
+    }
+
     try {
-      await axios.post("http://localhost:3000/signup", {
+      const { data } = await axios.post("http://localhost:3000/signup", {
         name,
         email,
         phone,
         password,
       });
-      alert("Signup Successful! Please log in.");
-      navigate("/"); 
+
+      alert("Signup Successful!");
+      navigate("/");
     } catch (error) {
-      alert("Signup Failed");
+      alert(error.response?.data?.msg || "Signup Failed");
     }
   };
 
   return (
     <div>
-      <h2>Signup</h2>
-      <form onSubmit={handleSignup}>
+      <h2>Sign Up</h2>
+      <form onSubmit={handleSignUp}>
         <input
           type="text"
           placeholder="Full Name"
@@ -45,7 +52,7 @@ const SignupForm = () => {
         />
         <input
           type="text"
-          placeholder="Phone"
+          placeholder="Phone Number"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           required
@@ -57,10 +64,19 @@ const SignupForm = () => {
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit">Signup</button>
+        <button type="submit">Sign Up</button>
       </form>
+      <p>
+        Already have an account?{" "}
+        <span
+          style={{ color: "blue", cursor: "pointer" }}
+          onClick={() => navigate("/")}
+        >
+          Login here
+        </span>
+      </p>
     </div>
   );
 };
 
-export default SignupForm;
+export default SignUp;

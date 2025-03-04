@@ -1,85 +1,131 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
-const AuthForm = ({ type }) => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    name: "",
-  });
+const PaymentForm = () => {
+  const [user, setUser] = useState(null);
+  const [amount, setAmount] = useState("");
+  const [transactionId, setTransactionId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token) navigate("/profile");
-  }, [navigate]);
+    fetchUserProfile();
+  }, []);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("User not authenticated");
+
+      const { data } = await axios.get("http://localhost:3000/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setUser(data);
+    } catch (error) {
+      alert(error.response?.data?.message || "Error fetching user profile");
+      navigate("/otp");
+    }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  const initiatePayment = async () => {
+    setShowConfirm(true);
+  };
+
+  const proceedWithPayment = async () => {
+    setShowConfirm(false);
     try {
-      const endpoint = type === "signup" ? "/signup" : "/login";
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("User not authenticated");
+
       const { data } = await axios.post(
-        `http://localhost:3000${endpoint}`,
-        formData
+        "http://localhost:3000/initiate",
+        { userId: user._id, amount },
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      localStorage.setItem("token", data.token);
-      navigate("/profile");
+
+      if (!data.order || !data.order.id) {
+        throw new Error("Invalid order data received from server");
+      }
+
+      setTransactionId(data.transaction.id);
+      processRazorpay(data.order);
     } catch (error) {
-      alert("Authentication failed");
+      alert(error.response?.data?.message || "Payment initiation failed!");
     } finally {
       setLoading(false);
     }
   };
 
+  const processRazorpay = (order) => {
+    if (!order || !order.id) {
+      alert("Invalid Razorpay order! Please try again.");
+      return;
+    }
+
+    const options = {
+      key: "rzp_test_3LvFxWtDmn26ge",
+      amount: order.amount,
+      currency: "INR",
+      name: "Test Payment",
+      order_id: order.id,
+      handler: async (response) => {
+        try {
+          await axios.post("http://localhost:3000/process", {
+            transactionId,
+            paymentId: response.razorpay_payment_id,
+          });
+
+          alert("Payment Successful!");
+          navigate("/success");
+        } catch (error) {
+          alert("Payment processing failed!");
+        }
+      },
+    };
+
+    if (!window.Razorpay) {
+      alert("Razorpay SDK not loaded!");
+      return;
+    }
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
+
   return (
-    <div className="flex flex-col items-center mt-10">
-      <h2 className="text-xl font-bold mb-4">
-        {type === "signup" ? "Signup" : "Login"}
-      </h2>
-      <form onSubmit={handleSubmit} className="flex flex-col space-y-3 w-80">
-        {type === "signup" && (
+    <div>
+      <h2>Payment Form</h2>
+      {user ? (
+        <>
+          <h3>User: {user.name}</h3>
+          <h3>Mobile: {user.phone}</h3>
           <input
-            type="text"
-            name="name"
-            placeholder="Name"
-            className="p-2 border rounded"
-            onChange={handleChange}
-            required
+            type="number"
+            placeholder="Enter Amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
           />
-        )}
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          className="p-2 border rounded"
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          className="p-2 border rounded"
-          onChange={handleChange}
-          required
-        />
-        <button
-          type="submit"
-          className="bg-blue-500 text-white p-2 rounded"
-          disabled={loading}
-        >
-          {loading ? "Processing..." : type === "signup" ? "Sign Up" : "Login"}
-        </button>
-      </form>
+          <button onClick={initiatePayment} disabled={loading}>
+            {loading ? "Processing..." : "Pay Now"}
+          </button>
+        </>
+      ) : (
+        <p>Loading user details...</p>
+      )}
+
+      {showConfirm && (
+        <div className="popup">
+          <p>Are you sure you want to transfer ₹{amount}?</p>
+          <button onClick={proceedWithPayment}>Yes</button>
+          <button onClick={() => setShowConfirm(false)}>No</button>
+        </div>
+      )}
     </div>
   );
 };
 
-export default AuthForm;
+export default PaymentForm;

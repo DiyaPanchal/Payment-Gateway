@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import * as PaymentController from "../controllers/PaymentController";
 import * as UserController from "../controllers/UserController";
+import * as OtpController from "../controllers/OtpController";
 // import authMiddleware from "../middlewares/AuthMiddleware";
 
 const apiRouter = express.Router();
@@ -15,5 +16,8 @@ apiRouter.post("/process", PaymentController.processPayment);
 apiRouter.post("/signup", UserController.signup);
 apiRouter.post("/login", UserController.login);
 apiRouter.get("/profile", UserController.getProfile);
+
+apiRouter.post("/sendotp", OtpController.sendOTP);
+apiRouter.post("/verifyotp", OtpController.verifyOTP);
 
 export default apiRouter;
