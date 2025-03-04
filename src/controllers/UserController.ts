@@ -20,6 +20,7 @@ export const signup = async (req: Request, res: Response): Promise<any> => {
 
     res.status(201).json({ msg: "User registered successfully" });
   } catch (error) {
+    console.log(error, "ServerError");
     res.status(500).json({ msg: "Server error", error });
   }
 };
@@ -46,7 +47,7 @@ export const login = async (req: Request, res: Response): Promise<any> => {
 
 export const getProfile = async (req: Request, res: Response): Promise<any> => {
   try {
-    const token = req.header("Authorization")?.split(" ")[1]; 
+    const token = req.header("Authorization")?.split(" ")[1];
     if (!token)
       return res.status(401).json({ msg: "No token, authorization denied" });
 

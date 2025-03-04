@@ -9,9 +9,8 @@ const SignUp = () => {
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [generatedOtp, setGeneratedOtp] = useState(null); 
+  const [generatedOtp, setGeneratedOtp] = useState(null);
   const navigate = useNavigate();
-
 
   const sendOtp = async () => {
     if (!phone) {
@@ -19,13 +18,14 @@ const SignUp = () => {
       return;
     }
 
-    const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`; 
+    const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`;
 
     try {
-      const { data } = await axios.post("http://localhost:3000/sendotp", {
+      const data = await axios.post("http://localhost:3000/sendotp", {
         phone: formattedPhone,
       });
 
+      console.log(JSON.stringify(data), "generatedOtp===");
       setGeneratedOtp(data.otp);
       setOtpSent(true);
       alert("OTP sent to your phone number!");
@@ -38,28 +38,42 @@ const SignUp = () => {
   const handleSignUp = async (e) => {
     e.preventDefault();
 
+    // Validate input fields
     if (!name || !email || !phone || !password || !otp) {
       alert("All fields are required!");
       return;
     }
 
-    if (otp !== generatedOtp) {
-      alert("Invalid OTP! Please enter the correct OTP.");
-      return;
-    }
-
     try {
-      await axios.post("http://localhost:3000/signup", {
-        name,
-        email,
-        phone,
-        password,
-      });
+      // Call the verifyOTP API to check the OTP validity
+      const verifyResponse = await axios.post(
+        "http://localhost:3000/verifyotp",
+        {
+          phone,
+          otp,
+        }
+      );
 
-      alert("Signup Successful!");
-      navigate("/");
+      console.log(JSON.stringify(verifyResponse), "VerifyResponse=====");
+      // Expecting success property in the response (adjust according to your API)
+      if (verifyResponse.data.success) {
+        // OTP is valid, proceed with signup API call
+        await axios.post("http://localhost:3000/signup", {
+          name,
+          email,
+          phone,
+          password,
+        });
+
+        alert("Signup Successful!");
+        navigate("/"); // Navigate to home page or wherever
+      } else {
+        alert("Invalid OTP! Please enter the correct OTP.");
+      }
     } catch (error) {
-      alert(error.response?.data?.msg || "Signup Failed");
+      console.error("OTP Verification Error:", error);
+      // Check for a proper error message in the API response
+      alert(error.response?.data?.msg || "OTP verification failed");
     }
   };
 
