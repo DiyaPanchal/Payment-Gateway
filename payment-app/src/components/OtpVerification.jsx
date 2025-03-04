@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ Import useNavigate
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const OTPVerification = () => {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
-  const navigate = useNavigate(); // ✅ Initialize navigate
+  const navigate = useNavigate();
 
   const sendOTP = async () => {
     try {
@@ -27,12 +27,9 @@ const OTPVerification = () => {
 
       alert("OTP verified! You can now proceed.");
 
-      // ✅ Save token if received
       if (data.token) {
         localStorage.setItem("token", data.token);
       }
-
-      // ✅ Redirect to payment page
       navigate("/payment");
     } catch (error) {
       alert("Invalid OTP");

@@ -58,3 +58,12 @@ export const getProfile = async (req: Request, res: Response): Promise<any> => {
     res.status(401).json({ msg: "Invalid token" });
   }
 };
+
+export const getUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const users = await User.find().select("_id name phone");
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching users" });
+  }
+};

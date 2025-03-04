@@ -10,8 +10,6 @@ const client = twilio(accountSid, authToken);
 export const sendOTP = async (req: Request, res: Response): Promise<any> => {
   try {
     const { phone } = req.body;
-
-    // Request Twilio to send an OTP
     const verification = await client.verify.v2
       .services("VAf3a15dacd72eefeba3751442287569dc")
       .verifications.create({ to: phone, channel: "sms" });
@@ -46,7 +44,6 @@ export const verifyOTP = async (req: Request, res: Response): Promise<any> => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // ✅ Mark OTP as verified in the database
     user.isOtpVerified = true;
     await user.save();
 

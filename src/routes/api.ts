@@ -9,13 +9,15 @@ const apiRouter = express.Router();
 apiRouter.use(bodyParser.json());
 
 apiRouter.post("/initiate", PaymentController.initiatePayment);
-apiRouter.post("/confirm", PaymentController.confirmPayment);
+// apiRouter.post("/confirm", PaymentController.confirmPayment);
 apiRouter.post("/process", PaymentController.processPayment);
 // apiRouter.post("/webhook/razorpay", PaymentController.razorpayWebhook);
 
 apiRouter.post("/signup", UserController.signup);
 apiRouter.post("/login", UserController.login);
 apiRouter.get("/profile", UserController.getProfile);
+apiRouter.get("/users", UserController.getUsers);
+
 
 apiRouter.post("/sendotp", OtpController.sendOTP);
 apiRouter.post("/verifyotp", OtpController.verifyOTP);

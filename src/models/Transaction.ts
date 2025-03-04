@@ -1,9 +1,15 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-
 export interface ITransaction extends Document {
   userId: string;
+  recipientId: string; 
   amount: number;
-  status: "Pending" | "Initiated" |"Confirmed"| "Deducted" | "Credited" | "Failed";
+  status:
+    | "Pending"
+    | "Initiated"
+    | "Confirmed"
+    | "Deducted"
+    | "Credited"
+    | "Failed";
   orderId?: string;
   paymentId?: string;
   reason?: string;
@@ -12,14 +18,22 @@ export interface ITransaction extends Document {
 const TransactionSchema = new Schema<ITransaction>(
   {
     userId: { type: String, required: true },
+    recipientId: { type: String, required: true },
     amount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["Pending", "Confirmed", "Initiated", "Deducted", "Credited", "Failed"],
+      enum: [
+        "Pending",
+        "Confirmed",
+        "Initiated",
+        "Deducted",
+        "Credited",
+        "Failed",
+      ],
       default: "Pending",
     },
-    orderId: { type: String }, 
-    paymentId: { type: String }, 
+    orderId: { type: String },
+    paymentId: { type: String },
     reason: { type: String },
   },
   { timestamps: true }

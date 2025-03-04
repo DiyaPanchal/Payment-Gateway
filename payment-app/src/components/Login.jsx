@@ -23,12 +23,13 @@ const LoginForm = () => {
   };
 
   return (
-    <div>
+    <div className="auth-container">
       <h2>Login</h2>
       <form onSubmit={handleLogin}>
         <input
           type="email"
           placeholder="Email"
+          className="auth-input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -36,18 +37,18 @@ const LoginForm = () => {
         <input
           type="password"
           placeholder="Password"
+          className="auth-input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-        <button type="submit">Login</button>
+        <button type="submit" className="auth-button">
+          Login
+        </button>
       </form>
       <p>
         Don't have an account?{" "}
-        <span
-          style={{ color: "blue", cursor: "pointer" }}
-          onClick={() => navigate("/signup")}
-        >
+        <span onClick={() => navigate("/signup")} className="auth-link">
           Signup here
         </span>
       </p>
