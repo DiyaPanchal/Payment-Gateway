@@ -1,24 +1,25 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+
 export interface ITransaction extends Document {
   userId: string;
-  recipientId: string; 
+  orderId: string;
+  paymentId?: string;
   amount: number;
   status:
     | "Pending"
-    | "Initiated"
     | "Confirmed"
+    | "Initiated"
     | "Deducted"
     | "Credited"
     | "Failed";
-  orderId?: string;
-  paymentId?: string;
-  reason?: string;
+  date: Date;
 }
 
 const TransactionSchema = new Schema<ITransaction>(
   {
     userId: { type: String, required: true },
-    recipientId: { type: String, required: true },
+    orderId: { type: String, required: true },
+    paymentId: { type: String },
     amount: { type: Number, required: true },
     status: {
       type: String,
@@ -32,9 +33,7 @@ const TransactionSchema = new Schema<ITransaction>(
       ],
       default: "Pending",
     },
-    orderId: { type: String },
-    paymentId: { type: String },
-    reason: { type: String },
+    date: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
@@ -43,4 +42,5 @@ const Transaction: Model<ITransaction> = mongoose.model<ITransaction>(
   "Transaction",
   TransactionSchema
 );
+
 export default Transaction;

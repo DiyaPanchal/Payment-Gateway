@@ -6,6 +6,7 @@ const PaymentForm = () => {
   const [user, setUser] = useState(null);
   const [amount, setAmount] = useState("");
   const [recipientId, setRecipientId] = useState("");
+  const [selectedUser, setSelectedUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [transactionId, setTransactionId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -17,6 +18,29 @@ const PaymentForm = () => {
     fetchUserProfile();
     fetchUsers();
   }, []);
+
+  const handleRecipientChange = (e) => {
+    const selectedId = e.target.value;
+    setRecipientId(selectedId);
+
+    // Find the selected user from the users array
+    const user = users.find((u) => u._id === selectedId);
+    setSelectedUser(user || null); // Store user details or null if not found
+  };
+
+  const createOrder = async (amount) => {
+    try {
+      const response = await axios.post("http://localhost:3000/create-order", {
+        amount: amount,
+        currency: "INR",
+      });
+
+      return response.data.orderId;
+    } catch (error) {
+      console.error("Error creating order:", error);
+      return null;
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -46,88 +70,95 @@ const PaymentForm = () => {
     }
   };
 
-  const initiateOtpVerification = async () => {
-    try {
-      setLoading(true);
-      if (!user || !user.phone) throw new Error("User data is missing");
-      await axios.post("http://localhost:3000/sendotp", { phone: user.phone });
-      alert("OTP sent to your registered mobile number");
-      setShowOtpInput(true);
-    } catch (error) {
-      alert(error.response?.data?.message || "Failed to send OTP");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const processPayment = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const token = localStorage.getItem("token");
+  //     if (!token) throw new Error("User not authenticated");
+  // const { data } = await axios.post(
+  //   "http://localhost:3000/initiate",
+  //   { userId: user._id, recipientId, amount },
+  //   { headers: { Authorization: `Bearer ${token}` } }
+  // );
+  //     if (!data.order || !data.order.id) {
+  //       throw new Error("Invalid order data received from server");
+  //     }
+  //     setTransactionId(data.transaction.id);
+  //     processRazorpay(data.order);
+  //   } catch (error) {
+  //     alert(error.response?.data?.message || "Payment initiation failed!");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  const verifyOtpAndProceed = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("User not authenticated");
-      const { data } = await axios.post(
-        "http://localhost:3000/verifyotp",
-        { phone: user.phone, otp },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (data.message === "OTP verified successfully") {
-        processPayment();
-      }
-    } catch (error) {
-      alert(error.response?.data?.message || "OTP verification failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const initiatePayment = async () => {
+  //   const token = localStorage.getItem("token");
+  //   if (!token) throw new Error("User not authenticated");
 
-  const processPayment = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("User not authenticated");
-      const { data } = await axios.post(
-        "http://localhost:3000/initiate",
-        { userId: user._id, recipientId, amount },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (!data.order || !data.order.id) {
-        throw new Error("Invalid order data received from server");
-      }
-      setTransactionId(data.transaction.id);
-      processRazorpay(data.order);
-    } catch (error) {
-      alert(error.response?.data?.message || "Payment initiation failed!");
-    } finally {
-      setLoading(false);
-    }
-  };
+  //   const response = await axios.post(
+  //     "http://localhost:3000/initiate",
+  //     { userId: user._id, recipientId, amount },
+  //     { headers: { Authorization: `Bearer ${token}` } }
+  //   );
 
-  const processRazorpay = (order) => {
+  //   console.log(response, "initiate payment response");
+  // };
+
+  const processRazorpay = async () => {
     if (!window.Razorpay) {
-      alert("Razorpay SDK not loaded!");
+      alert("Some Error Occured.Plz try again!");
       return;
     }
-    const options = {
-      key: "rzp_test_3LvFxWtDmn26ge",
-      amount: order.amount,
-      currency: "INR",
-      name: "Test Payment",
-      order_id: order.id,
-      handler: async (response) => {
-        try {
-          await axios.post("http://localhost:3000/process", {
-            transactionId,
-            paymentId: response.razorpay_payment_id,
-          });
-          alert("Payment Successful!");
-          navigate("/");
-        } catch (error) {
-          alert(error.response?.data?.message || "Payment processing failed!");
-        }
-      },
-    };
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+
+    try {
+      const orderId = await createOrder(amount);
+
+      const options = {
+        key: "rzp_test_3LvFxWtDmn26ge",
+        amount: amount * 100,
+        currency: "INR",
+        name: "Test Payment",
+        order_id: orderId,
+        prefill: {
+          name: selectedUser.name,
+          contact: selectedUser.phone,
+        },
+        handler: async (response) => {
+          try {
+            const paymentDetails = await axios.get(
+              `http://localhost:3000/get-payment-status/${response.razorpay_payment_id}`
+            );
+
+            const saveResponse = await axios.post(
+              "http://localhost:3000/save-transaction",
+              {
+                recipientId,
+                orderId,
+                paymentId: response.razorpay_payment_id,
+                amount,
+                status: paymentDetails.data.status,
+                date: new Date().toISOString(),
+              }
+            );
+
+            console.log("SaveResponse", saveResponse);
+
+            alert("Payment Successful!");
+            // navigate("/");
+          } catch (error) {
+            console.log("RazroPayError", JSON.stringify(error));
+            alert(
+              error.response?.data?.message || "Payment processing failed!"
+            );
+          }
+        },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (error) {
+      console.log("RazroPayError", JSON.stringify(error));
+    }
   };
 
   return (
@@ -138,10 +169,7 @@ const PaymentForm = () => {
           <h3>User: {user.name}</h3>
           <h3>Mobile: {user.phone}</h3>
           <label>Select Recipient:</label>
-          <select
-            value={recipientId}
-            onChange={(e) => setRecipientId(e.target.value)}
-          >
+          <select value={recipientId} onChange={handleRecipientChange}>
             <option value="">-- Select --</option>
             {users.map((u) => (
               <option key={u._id} value={u._id}>
@@ -158,7 +186,7 @@ const PaymentForm = () => {
           {!showOtpInput ? (
             <button
               className="pay-button"
-              onClick={initiateOtpVerification}
+              onClick={processRazorpay}
               disabled={loading}
             >
               {loading ? "Processing..." : "Pay Now"}
@@ -173,7 +201,7 @@ const PaymentForm = () => {
               />
               <button
                 className="otp-button"
-                onClick={verifyOtpAndProceed}
+                onClick={processPayment}
                 disabled={loading}
               >
                 {loading ? "Verifying..." : "Submit OTP"}
