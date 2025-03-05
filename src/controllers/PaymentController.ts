@@ -241,21 +241,36 @@ export const saveTransaction = async (
   res: Response
 ): Promise<any> => {
   console.log("Request Body:", req.body); // Debugging
-  try {
-    const { userId, orderId, paymentId, amount, status, date } = req.body;
 
-    // Ensure required fields exist
+  try {
+    const { recipientId, orderId, paymentId, amount, status, date } = req.body;
+    const userId = recipientId; // Map recipientId to userId
+
     if (!userId || !orderId || !paymentId || !amount || !status) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+
+    // Convert amount to number
+    const amountNumber = Number(amount);
+    if (isNaN(amountNumber)) {
+      return res.status(400).json({ error: "Invalid amount format" });
+    }
+
+    // Map status to match schema enum values
+    const statusMap: { [key: string]: string } = {
+      captured: "Confirmed",
+      pending: "Pending",
+      failed: "Failed",
+    };
+    const mappedStatus = statusMap[status.toLowerCase()] || "Pending";
 
     const transaction = new Transaction({
       userId,
       orderId,
       paymentId,
-      amount,
-      status,
-      date: date || new Date(), // Default to current date
+      amount: amountNumber,
+      status: mappedStatus,
+      date: date || new Date(),
     });
 
     await transaction.save();
