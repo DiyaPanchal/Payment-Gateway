@@ -8,12 +8,19 @@ import apiRouter from "./routes/api";
 const PORT = process.env.PORT || 3002;
 const app = express();
 
+// Middleware for parsing JSON
 app.use(express.json());
 app.use(cors());
-app.use("/",apiRouter);
 
-// app.use('/api/payment', paymentRoutes);
-// app.use('/api/auth', authRoutes);
+app.use(
+  "/webhook/razorpay",
+  express.json({
+    verify: (req: any, res, buf) => {
+      req.rawBody = buf.toString(); // ✅ Save rawBody for signature validation
+    },
+  })
+);
+app.use("/", apiRouter);
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 

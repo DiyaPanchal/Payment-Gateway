@@ -274,3 +274,60 @@ export const saveTransaction = async (
     res.status(500).json({ error: "Failed to save transaction" });
   }
 };
+
+export const razorpayWebhook = async (
+  req: any,
+  res: Response
+): Promise<any> => {
+  try {
+    const signature = req.headers["x-razorpay-signature"] as string | undefined;
+
+    console.log(signature, "WebHookSignature");
+
+    if (!signature) {
+      console.error("❌ Razorpay signature missing");
+      return res.status(400).json({ error: "Signature missing" });
+    }
+
+    const body = req?.rawBody; // ✅ Use rawBody for signature validation
+
+    // Validate the Razorpay webhook signature
+    const expectedSignature = crypto
+      .createHmac("sha256", "t6CmqzfF1yy9qw0EFxKJnCz0")
+      .update(body)
+      .digest("hex");
+
+    if (signature !== expectedSignature) {
+      console.error("❌ Invalid Razorpay webhook signature");
+      return res.status(400).json({ error: "Invalid signature" });
+    }
+
+    const event = req.body.event;
+    const payment = req.body.payload.payment.entity;
+
+    console.log("✅ Webhook Event:", event);
+
+    if (event === "payment.captured") {
+      await Transaction.findOneAndUpdate(
+        { paymentId: payment.id },
+        { status: "Confirmed" },
+        { new: true }
+      );
+      console.log(`✅ Payment ${payment.id} captured successfully.`);
+    } else if (event === "payment.failed") {
+      await Transaction.findOneAndUpdate(
+        { paymentId: payment.id },
+        { status: "Failed", failureReason: payment.error_description },
+        { new: true }
+      );
+      console.log(
+        `❌ Payment ${payment.id} failed: ${payment.error_description}`
+      );
+    }
+
+    res.json({ success: true, message: "Webhook processed" });
+  } catch (error) {
+    console.error("❌ Error handling Razorpay webhook:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
