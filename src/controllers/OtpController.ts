@@ -5,7 +5,7 @@ import twilio from "twilio";
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
-const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID; // Set this in your .env file
+const verifyServiceSid = process.env.TWILIO_VERIFY_SERVICE_SID;
 const client = twilio(accountSid, authToken);
 
 export const sendOTP = async (req: Request, res: Response): Promise<any> => {
@@ -16,7 +16,7 @@ export const sendOTP = async (req: Request, res: Response): Promise<any> => {
     }
 
     const verification = await client.verify.v2
-      .services("VAf3a15dacd72eefeba3751442287569dc")
+      .services(verifyServiceSid as string)
       .verifications.create({ to: phone, channel: "sms" });
 
     return res.json({
@@ -43,8 +43,8 @@ export const verifyOTP = async (req: Request, res: Response): Promise<any> => {
     //   .verificationChecks.create({ to: phone, code: otp });
 
     const verificationCheck = await client.verify.v2
-      .services("VAf3a15dacd72eefeba3751442287569dc")
-      .verificationChecks.create({ to: `+91${phone}`, code: otp });
+      .services(verifyServiceSid as string)
+      .verificationChecks.create({ to: `${phone}`, code: otp });
 
     // if (verificationCheck.status !== "approved") {
     //   console.error("Invalid OTP for phone:", phone);
@@ -72,6 +72,7 @@ export const verifyOTP = async (req: Request, res: Response): Promise<any> => {
       return res.status(400).send({ message: "Invalid OTP", success: false });
     }
   } catch (error: any) {
+    console.log(error);
     console.error("Error verifying OTP:", JSON.stringify(error));
     return res.status(500).json({ message: "Error verifying OTP", error });
   }

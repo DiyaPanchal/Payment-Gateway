@@ -23,9 +23,8 @@ const PaymentForm = () => {
     const selectedId = e.target.value;
     setRecipientId(selectedId);
 
-    // Find the selected user from the users array
     const user = users.find((u) => u._id === selectedId);
-    setSelectedUser(user || null); // Store user details or null if not found
+    setSelectedUser(user || null);
   };
 
   const createOrder = async (amount) => {
@@ -52,6 +51,7 @@ const PaymentForm = () => {
       });
       setUser(data);
     } catch (error) {
+      console.log(error);
       alert(error.response?.data?.message || "Error fetching user profile");
     }
   };

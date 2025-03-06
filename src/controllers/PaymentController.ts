@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import Razorpay from "razorpay";
 import Transaction from "../models/Transaction";
 import User from "../models/User";
+import logger from "../utils/logger"
 import crypto from "crypto";
 
 const razorpay = new Razorpay({
@@ -15,7 +16,7 @@ export const initiatePayment = async (
 ): Promise<any> => {
   try {
     const { userId, amount, recipientId } = req.body;
-    console.log("Received payment initiation request:", {
+    logger.info("Received payment initiation request", {
       userId,
       amount,
       recipientId,
@@ -23,32 +24,23 @@ export const initiatePayment = async (
 
     const user = await User.findById(userId);
     if (!user) {
-      console.log("User not found");
+      logger.warn("User not found", { userId });
       return res.status(404).json({ message: "User not found" });
     }
-    console.log("User OTP verification status:", user.isOtpVerified);
-
-    // if (!user.isOtpVerified) {
-    //   console.log("OTP not verified for user:", user.phone);
-    //   return res.status(403).json({ message: "OTP verification required" });
-    // }
 
     const recipient = await User.findById(recipientId);
     if (!recipient) {
-      console.log("Recipient not found:", recipientId);
+      logger.warn("Recipient not found", { recipientId });
       return res.status(404).json({ message: "Recipient not found" });
     }
-    console.log("Recipient found:", recipient);
 
-    console.log("Creating transaction...");
     const transaction = await Transaction.create({
       userId,
       recipientId,
       amount,
       status: "Pending",
     });
-
-    console.log("Transaction created:", transaction);
+    logger.info("Transaction created", { transactionId: transaction.id });
 
     const options = {
       amount: amount * 100,
@@ -56,27 +48,27 @@ export const initiatePayment = async (
       receipt: transaction.id,
       payment_capture: 1,
     };
-
-    console.log("Creating Razorpay order...");
     const order = await razorpay.orders.create(options);
-    console.log("Razorpay order created:", order);
 
     transaction.status = "Initiated";
     transaction.orderId = order.id;
     await transaction.save();
 
-    console.log("Payment initiation successful!");
-    res.status(201).json({
-      message: "Payment initiated",
-      transaction,
-      order,
-      phone: user.phone,
-    });
+    logger.info("Payment initiation successful", { orderId: order.id });
+    res
+      .status(201)
+      .json({
+        message: "Payment initiated",
+        transaction,
+        order,
+        phone: user.phone,
+      });
   } catch (error) {
-    console.error("Error in payment initiation:", error);
+    logger.error("Error in payment initiation", { error });
     res.status(500).json({ message: "Server error", error });
   }
 };
+
 
 // export const confirmPayment = async (req: Request, res: Response): Promise<any> => {
 //   try {
@@ -200,24 +192,22 @@ export const createOrder = async (
   res: Response
 ): Promise<any> => {
   try {
-    const { amount, currency } = req.body;
-
+    const { amount } = req.body;
     if (!amount || isNaN(amount)) {
       return res.status(400).json({ error: "Invalid amount" });
     }
 
     const options = {
-      amount: amount * 100, // Amount in paise (₹1 = 100 paise)
+      amount: amount * 100,
       currency: "INR",
-      payment_capture: 1, // Auto-capture payment
+      payment_capture: 1,
     };
-
     const order = await razorpay.orders.create(options);
 
-    console.log(JSON.stringify(order), "CreateOrderResponse");
+    logger.info("Razorpay order created", { orderId: order.id });
     res.json({ orderId: order.id });
   } catch (error) {
-    console.error("Error creating Razorpay order:", error);
+    logger.error("Error creating Razorpay order", { error });
     res.status(500).json({ error: "Failed to create order" });
   }
 };
@@ -229,9 +219,13 @@ export const getPaymentStatus = async (
   try {
     const paymentId = req.params.paymentId;
     const payment = await razorpay.payments.fetch(paymentId);
-    res.json({ status: payment.status }); // captured, failed, authorized, pending, etc.
+    logger.info("Fetched payment status", {
+      paymentId,
+      status: payment.status,
+    });
+    res.json({ status: payment.status });
   } catch (error) {
-    console.error("Error fetching payment status:", error);
+    logger.error("Error fetching payment status", { error });
     res.status(500).json({ error: "Failed to fetch payment status" });
   }
 };
@@ -240,23 +234,19 @@ export const saveTransaction = async (
   req: Request,
   res: Response
 ): Promise<any> => {
-  console.log("Request Body:", req.body); // Debugging
-
   try {
     const { recipientId, orderId, paymentId, amount, status, date } = req.body;
-    const userId = recipientId; // Map recipientId to userId
+    const userId = recipientId;
 
     if (!userId || !orderId || !paymentId || !amount || !status) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Convert amount to number
     const amountNumber = Number(amount);
     if (isNaN(amountNumber)) {
       return res.status(400).json({ error: "Invalid amount format" });
     }
 
-    // Map status to match schema enum values
     const statusMap: { [key: string]: string } = {
       captured: "Confirmed",
       pending: "Pending",
@@ -272,11 +262,15 @@ export const saveTransaction = async (
       status: mappedStatus,
       date: date || new Date(),
     });
-
     await transaction.save();
+
+    logger.info("Transaction saved successfully", {
+      transactionId: transaction.id,
+      status: transaction.status,
+    });
     res.json({ success: true, message: "Transaction saved successfully" });
   } catch (error) {
-    console.error("Error saving transaction:", error);
+    logger.error("Error saving transaction", { error });
     res.status(500).json({ error: "Failed to save transaction" });
   }
 };

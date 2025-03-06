@@ -1,150 +1,80 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import React, { useState } from "react";
 
-const SignUp = () => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [generatedOtp, setGeneratedOtp] = useState(null);
+const Signup = () => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+
   const navigate = useNavigate();
 
-  const sendOtp = async () => {
-    if (!phone) {
-      alert("Please enter a phone number.");
-      return;
-    }
-
-    const formattedPhone = phone.startsWith("+91") ? phone : `+91${phone}`;
-
-    try {
-      const data = await axios.post("http://localhost:3000/sendotp", {
-        phone: formattedPhone,
-      });
-
-      console.log(JSON.stringify(data), "generatedOtp===");
-      setGeneratedOtp(data.otp);
-      setOtpSent(true);
-      alert("OTP sent to your phone number!");
-    } catch (error) {
-      console.error("Error sending OTP:", error);
-      alert(error.response?.data?.msg || "Failed to send OTP");
-    }
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSignUp = async (e) => {
+  const handleSignUp = (e) => {
     e.preventDefault();
 
-    // Validate input fields
-    if (!name || !email || !phone || !password || !otp) {
+    const { name, email, password } = formData;
+
+    if (!name || !email || !password) {
       alert("All fields are required!");
       return;
     }
 
-    try {
-      // Call the verifyOTP API to check the OTP validity
-      const verifyResponse = await axios.post(
-        "http://localhost:3000/verifyotp",
-        {
-          phone,
-          otp,
-        }
-      );
+    localStorage.setItem(
+      "signupData",
+      JSON.stringify({ name, email, password })
+    );
 
-      console.log(JSON.stringify(verifyResponse), "VerifyResponse=====");
-      // Expecting success property in the response (adjust according to your API)
-      if (verifyResponse.data.success) {
-        // OTP is valid, proceed with signup API call
-        await axios.post("http://localhost:3000/signup", {
-          name,
-          email,
-          phone,
-          password,
-        });
-
-        alert("Signup Successful!");
-        navigate("/"); // Navigate to home page or wherever
-      } else {
-        alert("Invalid OTP! Please enter the correct OTP.");
-      }
-    } catch (error) {
-      console.error("OTP Verification Error:", error);
-      // Check for a proper error message in the API response
-      alert(error.response?.data?.msg || "OTP verification failed");
-    }
+    navigate("/otp");
   };
 
   return (
     <div className="auth-container">
-      <h2>Sign Up</h2>
+      <h2>Create Account</h2>
+
       <form onSubmit={handleSignUp}>
         <input
           type="text"
-          placeholder="Full Name"
+          name="name"
+          placeholder="Your username"
+          value={formData.name}
+          onChange={handleChange}
           className="auth-input"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
         />
+
         <input
           type="email"
-          placeholder="Email"
+          name="email"
+          placeholder="Your email"
+          value={formData.email}
+          onChange={handleChange}
           className="auth-input"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
         />
-        <div className="otp-container">
-          <input
-            type="text"
-            placeholder="Phone Number"
-            className="auth-input"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-          />
-          <button
-            type="button"
-            className="otp-button"
-            onClick={sendOtp}
-            disabled={otpSent}
-          >
-            {otpSent ? "OTP Sent" : "Send OTP"}
-          </button>
-        </div>
-        {otpSent && (
-          <input
-            type="text"
-            placeholder="Enter OTP"
-            className="auth-input"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value)}
-            required
-          />
-        )}
+
         <input
           type="password"
+          name="password"
           placeholder="Password"
+          value={formData.password}
+          onChange={handleChange}
           className="auth-input"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
         />
+
+        <div className="terms-container">
+          <input type="checkbox" id="terms" required />
+          <label htmlFor="terms">I accept the terms and privacy policy</label>
+        </div>
+
         <button type="submit" className="auth-button">
-          Sign Up
+          Sign up
         </button>
       </form>
-      <p>
-        Already have an account?{" "}
-        <span onClick={() => navigate("/")} className="auth-link">
-          Login here
-        </span>
-      </p>
     </div>
   );
 };
 
-export default SignUp;
+export default Signup;

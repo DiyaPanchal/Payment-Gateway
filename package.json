@@ -22,9 +22,11 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.11.0",
+    "mongoose": "^8.12.1",
     "razorpay": "^2.9.6",
-    "twilio": "^5.4.5"
+    "twilio": "^5.4.5",
+    "winston": "^3.17.0",
+    "winston-mongodb": "^6.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
