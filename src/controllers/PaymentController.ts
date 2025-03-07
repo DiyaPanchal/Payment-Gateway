@@ -110,20 +110,74 @@ export const getPaymentStatus = async (
   }
 };
 
+// export const saveTransaction = async (
+//   req: Request,
+//   res: Response
+// ): Promise<any> => {
+//   try {
+//     const { userId, recipientId, orderId, paymentId, amount, status, date } =
+//       req.body;
+//     // const userId = recipientId;
+
+//     if (!userId || !orderId || !paymentId || !amount || !status) {
+//       return res.status(400).json({ error: "Missing required fields" });
+//     }
+
+//     const amountNumber = Number(amount);
+//     if (isNaN(amountNumber)) {
+//       return res.status(400).json({ error: "Invalid amount format" });
+//     }
+
+//     const statusMap: { [key: string]: string } = {
+//       captured: "Captured",
+//       pending: "Pending",
+//       failed: "Failed",
+//     };
+//     const mappedStatus = statusMap[status.toLowerCase()] || "Pending";
+
+//     const transaction = new Transaction({
+//       userId,
+//       recipientId,
+//       orderId,
+//       paymentId,
+//       amount: amountNumber,
+//       status: mappedStatus,
+//       date: date || new Date(),
+//     });
+//     await transaction.save();
+
+//     logger.info("Transaction saved successfully", {
+//       transactionId: transaction.id,
+//       status: transaction.status,
+//     });
+//     res.json({ success: true, message: "Transaction saved successfully" });
+//   } catch (error) {
+//     logger.error("Error saving transaction", { error });
+//     res.status(500).json({ error: "Failed to save transaction" });
+//   }
+// };
+
 export const saveTransaction = async (
   req: Request,
   res: Response
 ): Promise<any> => {
   try {
-    const { recipientId, orderId, paymentId, amount, status, date } = req.body;
-    const userId = recipientId;
+    const { userId, recipientId, orderId, paymentId, amount, status, date } =
+      req.body;
 
-    if (!userId || !orderId || !paymentId || !amount || !status) {
+    if (
+      !userId ||
+      !recipientId ||
+      !orderId ||
+      !paymentId ||
+      !amount ||
+      !status
+    ) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     const amountNumber = Number(amount);
-    if (isNaN(amountNumber)) {
+    if (isNaN(amountNumber) || amountNumber <= 0) {
       return res.status(400).json({ error: "Invalid amount format" });
     }
 
@@ -134,6 +188,7 @@ export const saveTransaction = async (
     };
     const mappedStatus = statusMap[status.toLowerCase()] || "Pending";
 
+    // Save transaction
     const transaction = new Transaction({
       userId,
       recipientId,
@@ -143,12 +198,32 @@ export const saveTransaction = async (
       status: mappedStatus,
       date: date || new Date(),
     });
+
     await transaction.save();
+
+    // **Update User's Balance Only If Transaction Is Successful**
+    if (mappedStatus === "Captured") {
+      const updatedUser = await User.findByIdAndUpdate(
+        recipientId,
+        { $inc: { balance: amountNumber } }, // Increment balance by amount
+        { new: true } // Return updated user
+      );
+
+      if (!updatedUser) {
+        return res.status(404).json({ error: "Recipient user not found" });
+      }
+
+      logger.info("Balance updated successfully", {
+        userId: recipientId,
+        newBalance: updatedUser.balance,
+      });
+    }
 
     logger.info("Transaction saved successfully", {
       transactionId: transaction.id,
       status: transaction.status,
     });
+
     res.json({ success: true, message: "Transaction saved successfully" });
   } catch (error) {
     logger.error("Error saving transaction", { error });

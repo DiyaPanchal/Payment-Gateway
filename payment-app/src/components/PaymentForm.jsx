@@ -126,8 +126,8 @@ const PaymentForm = () => {
         name: "Test Payment",
         order_id: orderId,
         prefill: {
-          name: selectedUser.name,
-          contact: selectedUser.phone,
+          name: user.name,
+          contact: user.phone,
         },
         handler: async (response) => {
           try {
@@ -148,6 +148,8 @@ const PaymentForm = () => {
               }
             );
 
+            setAmount("");
+            setRecipientId("");
             console.log("SaveResponse", saveResponse);
 
             alert("Payment Successful!");
