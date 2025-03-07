@@ -6,7 +6,7 @@ const Signup = () => {
     name: "",
     email: "",
     password: "",
-    amount: "", // Initially empty
+    balance: "", 
   });
 
   const navigate = useNavigate();
@@ -16,23 +16,23 @@ const Signup = () => {
 
     setFormData({
       ...formData,
-      [name]: name === "amount" ? value.replace(/\D/g, "") : value, // Allow only numbers
+      [name]: name === "balance" ? value.replace(/\D/g, "") : value,
     });
   };
 
   const handleSignUp = (e) => {
     e.preventDefault();
 
-    const { name, email, password, amount } = formData;
+    const { name, email, password, balance } = formData;
 
-    if (!name || !email || !password || amount === "") {
+    if (!name || !email || !password || balance === "") {
       alert("All fields are required!");
       return;
     }
 
     localStorage.setItem(
       "signupData",
-      JSON.stringify({ name, email, password, amount })
+      JSON.stringify({ name, email, password, balance })
     );
 
     navigate("/otp");
@@ -71,10 +71,10 @@ const Signup = () => {
         />
 
         <input
-          type="text" // Use text to allow empty value
-          name="amount" // Corrected name attribute
+          type="text"
+          name="balance"
           placeholder="Add balance"
-          value={formData.amount}
+          value={formData.balance}
           onChange={handleChange}
           className="auth-input"
         />

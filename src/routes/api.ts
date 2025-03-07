@@ -11,7 +11,7 @@ apiRouter.use(bodyParser.json());
 apiRouter.post("/initiate", PaymentController.initiatePayment);
 // apiRouter.post("/confirm", PaymentController.confirmPayment);
 // apiRouter.post("/process", PaymentController.processPayment);
-// apiRouter.post("/webhook/razorpay", PaymentController.razorpayWebhook);
+
 apiRouter.post("/create-order", PaymentController.createOrder);
 apiRouter.get(
   "/get-payment-status/:paymentId",

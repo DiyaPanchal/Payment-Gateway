@@ -110,53 +110,6 @@ export const getPaymentStatus = async (
   }
 };
 
-// export const saveTransaction = async (
-//   req: Request,
-//   res: Response
-// ): Promise<any> => {
-//   try {
-//     const { userId, recipientId, orderId, paymentId, amount, status, date } =
-//       req.body;
-//     // const userId = recipientId;
-
-//     if (!userId || !orderId || !paymentId || !amount || !status) {
-//       return res.status(400).json({ error: "Missing required fields" });
-//     }
-
-//     const amountNumber = Number(amount);
-//     if (isNaN(amountNumber)) {
-//       return res.status(400).json({ error: "Invalid amount format" });
-//     }
-
-//     const statusMap: { [key: string]: string } = {
-//       captured: "Captured",
-//       pending: "Pending",
-//       failed: "Failed",
-//     };
-//     const mappedStatus = statusMap[status.toLowerCase()] || "Pending";
-
-//     const transaction = new Transaction({
-//       userId,
-//       recipientId,
-//       orderId,
-//       paymentId,
-//       amount: amountNumber,
-//       status: mappedStatus,
-//       date: date || new Date(),
-//     });
-//     await transaction.save();
-
-//     logger.info("Transaction saved successfully", {
-//       transactionId: transaction.id,
-//       status: transaction.status,
-//     });
-//     res.json({ success: true, message: "Transaction saved successfully" });
-//   } catch (error) {
-//     logger.error("Error saving transaction", { error });
-//     res.status(500).json({ error: "Failed to save transaction" });
-//   }
-// };
-
 export const saveTransaction = async (
   req: Request,
   res: Response
@@ -188,18 +141,15 @@ export const saveTransaction = async (
     };
     const mappedStatus = statusMap[status.toLowerCase()] || "Pending";
 
-    // Fetch sender (userId) to check balance
     const sender = await User.findById(userId);
     if (!sender) {
       return res.status(404).json({ error: "Sender user not found" });
     }
 
-    // Ensure sender has enough balance
     if (mappedStatus === "Captured" && sender.balance < amountNumber) {
       return res.status(400).json({ error: "Insufficient balance" });
     }
 
-    // Save transaction
     const transaction = new Transaction({
       userId,
       recipientId,
@@ -212,24 +162,20 @@ export const saveTransaction = async (
 
     await transaction.save();
 
-    // **Update balances only if transaction is successful**
     if (mappedStatus === "Captured") {
-      // Deduct amount from sender's balance
       const updatedSender = await User.findByIdAndUpdate(
         userId,
-        { $inc: { balance: -amountNumber } }, // Deduct balance
-        { new: true } // Return updated user
+        { $inc: { balance: -amountNumber } },
+        { new: true } 
       );
 
       if (!updatedSender) {
         return res.status(404).json({ error: "Sender user not found" });
       }
-
-      // Add amount to recipient's balance
       const updatedRecipient = await User.findByIdAndUpdate(
         recipientId,
-        { $inc: { balance: amountNumber } }, // Increment balance
-        { new: true } // Return updated user
+        { $inc: { balance: amountNumber } },
+        { new: true } 
       );
 
       if (!updatedRecipient) {
