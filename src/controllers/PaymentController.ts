@@ -188,6 +188,17 @@ export const saveTransaction = async (
     };
     const mappedStatus = statusMap[status.toLowerCase()] || "Pending";
 
+    // Fetch sender (userId) to check balance
+    const sender = await User.findById(userId);
+    if (!sender) {
+      return res.status(404).json({ error: "Sender user not found" });
+    }
+
+    // Ensure sender has enough balance
+    if (mappedStatus === "Captured" && sender.balance < amountNumber) {
+      return res.status(400).json({ error: "Insufficient balance" });
+    }
+
     // Save transaction
     const transaction = new Transaction({
       userId,
@@ -201,21 +212,35 @@ export const saveTransaction = async (
 
     await transaction.save();
 
-    // **Update User's Balance Only If Transaction Is Successful**
+    // **Update balances only if transaction is successful**
     if (mappedStatus === "Captured") {
-      const updatedUser = await User.findByIdAndUpdate(
-        recipientId,
-        { $inc: { balance: amountNumber } }, // Increment balance by amount
+      // Deduct amount from sender's balance
+      const updatedSender = await User.findByIdAndUpdate(
+        userId,
+        { $inc: { balance: -amountNumber } }, // Deduct balance
         { new: true } // Return updated user
       );
 
-      if (!updatedUser) {
+      if (!updatedSender) {
+        return res.status(404).json({ error: "Sender user not found" });
+      }
+
+      // Add amount to recipient's balance
+      const updatedRecipient = await User.findByIdAndUpdate(
+        recipientId,
+        { $inc: { balance: amountNumber } }, // Increment balance
+        { new: true } // Return updated user
+      );
+
+      if (!updatedRecipient) {
         return res.status(404).json({ error: "Recipient user not found" });
       }
 
-      logger.info("Balance updated successfully", {
-        userId: recipientId,
-        newBalance: updatedUser.balance,
+      logger.info("Balances updated successfully", {
+        senderId: userId,
+        senderNewBalance: updatedSender.balance,
+        recipientId: recipientId,
+        recipientNewBalance: updatedRecipient.balance,
       });
     }
 

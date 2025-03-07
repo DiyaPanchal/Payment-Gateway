@@ -111,6 +111,11 @@ const PaymentForm = () => {
   // };
 
   const processRazorpay = async () => {
+    if (amount > user.balance) {
+      alert("Insufficient balance!");
+      return;
+    }
+
     if (!window.Razorpay) {
       alert("Some Error Occured.Plz try again!");
       return;
