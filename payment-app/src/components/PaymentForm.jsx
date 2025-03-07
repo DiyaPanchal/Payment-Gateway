@@ -6,6 +6,8 @@ const PaymentForm = () => {
   const [user, setUser] = useState(null);
   const [amount, setAmount] = useState("");
   const [recipientId, setRecipientId] = useState("");
+  const [userId, setUserId] = useState("");
+
   const [selectedUser, setSelectedUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [transactionId, setTransactionId] = useState(null);
@@ -49,6 +51,9 @@ const PaymentForm = () => {
       const { data } = await axios.get("http://localhost:3000/profile", {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      console.log(data, "useState");
+      setUserId(data._id);
       setUser(data);
     } catch (error) {
       console.log(error);
@@ -133,6 +138,7 @@ const PaymentForm = () => {
             const saveResponse = await axios.post(
               "http://localhost:3000/save-transaction",
               {
+                userId,
                 recipientId,
                 orderId,
                 paymentId: response.razorpay_payment_id,

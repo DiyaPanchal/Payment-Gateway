@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import Razorpay from "razorpay";
 import Transaction from "../models/Transaction";
 import User from "../models/User";
-import logger from "../utils/logger"
+import logger from "../utils/logger";
 import crypto from "crypto";
 
 const razorpay = new Razorpay({
@@ -55,14 +55,12 @@ export const initiatePayment = async (
     await transaction.save();
 
     logger.info("Payment initiation successful", { orderId: order.id });
-    res
-      .status(201)
-      .json({
-        message: "Payment initiated",
-        transaction,
-        order,
-        phone: user.phone,
-      });
+    res.status(201).json({
+      message: "Payment initiated",
+      transaction,
+      order,
+      phone: user.phone,
+    });
   } catch (error) {
     logger.error("Error in payment initiation", { error });
     res.status(500).json({ message: "Server error", error });
@@ -138,6 +136,7 @@ export const saveTransaction = async (
 
     const transaction = new Transaction({
       userId,
+      recipientId,
       orderId,
       paymentId,
       amount: amountNumber,
@@ -156,4 +155,3 @@ export const saveTransaction = async (
     res.status(500).json({ error: "Failed to save transaction" });
   }
 };
-
