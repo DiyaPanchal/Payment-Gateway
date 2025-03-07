@@ -5,7 +5,7 @@ export interface ITransaction extends Document {
   orderId: string;
   paymentId?: string;
   amount: number;
-  status: "Pending" | "Initiated" | "Deducted" | "Credited" | "Failed";
+  status: "Pending" | "Initiated" | "Captured" | "Failed";
   date: Date;
 }
 
@@ -17,7 +17,8 @@ const TransactionSchema = new Schema<ITransaction>(
     amount: { type: Number, required: true },
     status: {
       type: String,
-      enum: ["Initiated", "Deducted", "Credited", "Failed"],
+      enum: ["Initiated", "Failed","Captured"],
+      
       default: "Pending",
     },
     date: { type: Date, default: Date.now },

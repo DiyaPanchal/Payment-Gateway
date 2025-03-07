@@ -18,7 +18,7 @@ apiRouter.get(
   PaymentController.getPaymentStatus
 );
 apiRouter.post("/save-transaction", PaymentController.saveTransaction);
-apiRouter.post("/webhook/razorpay", PaymentController.razorpayWebhook);
+
 
 apiRouter.post("/signup", UserController.signup);
 apiRouter.post("/login", UserController.login);
